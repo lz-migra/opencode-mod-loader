@@ -110,18 +110,18 @@ the proxy process. Only install trusted server mods.
 ```
 ┌─────────────────┐            ┌──────────────────────────────┐         ┌──────────────────┐
 │  Browser        │-----------→│ Proxy (:8080)                │--------→│  OpenCode Server │
-│  localhost:8080 │    HTTP    │  • inject client mods         │  HTTP   │  localhost:4096  │
-│                 │←-----------│  • run server mod hooks       │←--------│ • upstream proxy │
+│  localhost:8080 │    HTTP    │  • inject client mods        │  HTTP   │  localhost:4096  │
+│                 │←-----------│  • run server mod hooks      │←--------│ • upstream proxy │
 └─────────────────┘            │  • serve /__oc_mods/*.js     │         └──────────────────┘
                                │  • ETag cache busting        │
                                └──────────────────────────────┘
                                               │
                                               ↓
-                                     ┌─────────────────┐
-                                     │  scripts/       │
-                                     │  *.js (client IIFE) │
-                                     │  *.server.{js,mjs}  │
-                                     └─────────────────┘
+                                   ┌─────────────────────┐
+                                   │  scripts/           │
+                                   │  *.js (client IIFE) │
+                                   │  *.server.{js,mjs}  │
+                                   └─────────────────────┘
 ```
 
 ## Cache Busting Strategy
