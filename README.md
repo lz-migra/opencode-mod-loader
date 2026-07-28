@@ -18,9 +18,9 @@ or transform buffered upstream responses.
 
 ## Quick Start
 
-```powershell
+```
 # 1. Install dependencies (one-time)
-cd C:\Users\LordLoro05\opencode-mod-loader
+cd \opencode-mod-loader
 npm install
 
 # 2. Start OpenCode server (in another terminal, anywhere)
@@ -28,7 +28,7 @@ cd D:\code\my-project
 opencode web --port 4096
 
 # 3. Start the mod loader proxy
-cd C:\Users\LordLoro05\opencode-mod-loader
+cd \opencode-mod-loader
 node server.mjs
 
 # 4. Open your browser at
