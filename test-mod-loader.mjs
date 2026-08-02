@@ -2,7 +2,7 @@
 //
 // Runs:
 //   1. mock OpenCode server on :4096
-//   2. mod loader proxy on :8080
+//   2. mod loader proxy on :18731
 //   3. HTTP requests through the proxy
 //   4. assertions on responses
 
@@ -22,7 +22,7 @@ function startMock() {
 }
 
 function startProxy() {
-  const p = spawn('node', ['server.mjs'], { cwd, stdio: 'pipe', env: { ...process.env, OC_VERBOSE: '1' } })
+  const p = spawn('node', ['server.mjs'], { cwd, stdio: 'pipe', env: { ...process.env, OC_PROXY_PORT: '18731', OC_VERBOSE: '1' } })
   p.stdout.on('data', (d) => process.stdout.write(`[proxy] ${d}`))
   p.stderr.on('data', (d) => process.stderr.write(`[proxy!] ${d}`))
   return p
@@ -56,14 +56,14 @@ async function fetchJson(url) {
   const mock = startMock()
   await sleep(500)
 
-  console.log('Starting mod loader proxy on :8080…')
+  console.log('Starting mod loader proxy on :18731…')
   const proxy = startProxy()
   await sleep(1500)
 
   try {
     console.log('\n── Test 1: HTML injection ──')
     {
-      const r = await fetchText('http://127.0.0.1:8080/')
+      const r = await fetchText('http://127.0.0.1:18731/')
       assert(r.status === 200, 'HTML status 200')
       assert(r.body.includes('OC MOD LOADER active'), 'HTML has mod banner')
       assert(r.body.includes('oc-mod-loader') && r.body.includes('<script'), 'HTML has loader script tag')
@@ -74,7 +74,7 @@ async function fetchJson(url) {
 
     console.log('\n── Test 2: Bundle JS injection ──')
     {
-      const r = await fetchText('http://127.0.0.1:8080/assets/index-abc123.js')
+      const r = await fetchText('http://127.0.0.1:18731/assets/index-abc123.js')
       assert(r.status === 200, 'Bundle status 200')
       assert(r.headers.get('content-type')?.includes('javascript'), 'Content-Type is JS')
       assert(r.body.includes('OC MOD LOADER injection'), 'Bundle has injection banner')
@@ -88,11 +88,11 @@ async function fetchJson(url) {
 
     console.log('\n── Test 3: ETag cache revalidation ──')
     {
-      const r1 = await fetchText('http://127.0.0.1:8080/assets/index-abc123.js')
+      const r1 = await fetchText('http://127.0.0.1:18731/assets/index-abc123.js')
       const etag = r1.headers.get('etag')
       assert(etag, 'ETag present on first request')
 
-      const r2 = await fetch('http://127.0.0.1:8080/assets/index-abc123.js', {
+      const r2 = await fetch('http://127.0.0.1:18731/assets/index-abc123.js', {
         headers: { 'if-none-match': etag },
       })
       assert(r2.status === 304, 'Second request returns 304 when If-None-Match matches')
@@ -100,7 +100,7 @@ async function fetchJson(url) {
 
     console.log('\n── Test 4: Manifest endpoint ──')
     {
-      const r = await fetchJson('http://127.0.0.1:8080/__oc_mods/manifest.json')
+      const r = await fetchJson('http://127.0.0.1:18731/__oc_mods/manifest.json')
       assert(r.status === 200, 'Manifest status 200')
       assert(Array.isArray(r.body.mods), 'Manifest has mods array')
       assert(r.body.mods.length === 4, 'Manifest has 4 mods')
@@ -110,14 +110,14 @@ async function fetchJson(url) {
 
     console.log('\n── Test 5: Standalone mod loader endpoint ──')
     {
-      const r = await fetchText('http://127.0.0.1:8080/__oc_mods/loader.js')
+      const r = await fetchText('http://127.0.0.1:18731/__oc_mods/loader.js')
       assert(r.status === 200, 'Loader endpoint status 200')
       assert(r.body.includes('OC_MOD_LOADER'), 'Loader.js contains loader marker')
     }
 
     console.log('\n── Test 6: Individual mod endpoint ──')
     {
-      const r = await fetchText('http://127.0.0.1:8080/__oc_mods/classic-layout.js')
+      const r = await fetchText('http://127.0.0.1:18731/__oc_mods/classic-layout.js')
       assert(r.status === 200, 'Mod endpoint status 200')
       assert(r.body.includes('globalThis.OC.register'), 'Mod source preserved')
       assert(r.headers.get('etag'), 'Mod has ETag')
@@ -125,14 +125,14 @@ async function fetchJson(url) {
 
     console.log('\n── Test 7: Pass-through to upstream ──')
     {
-      const r = await fetchText('http://127.0.0.1:8080/global/health')
+      const r = await fetchText('http://127.0.0.1:18731/global/health')
       assert(r.status === 200, 'Health endpoint reachable via proxy')
       assert(r.body.includes('"version"'), 'Health response is JSON with version')
     }
 
     console.log('\n── Test 8: Pass-through preserves API endpoints ──')
     {
-      const r = await fetchJson('http://127.0.0.1:8080/file/list?path=')
+      const r = await fetchJson('http://127.0.0.1:18731/file/list?path=')
       assert(r.status === 200, 'API endpoint reachable')
       assert(Array.isArray(r.body), 'API returns array')
       assert(r.body.length > 0, 'API returns data')
@@ -144,7 +144,7 @@ async function fetchJson(url) {
       const fs = await import('node:fs/promises')
       await fs.writeFile(path.join(cwd, 'scripts', '_disabled.js'), 'globalThis.OC.register({ id: "should-not-load", init() {} })')
       await sleep(800) // Wait for watcher to pick up
-      const r = await fetchJson('http://127.0.0.1:8080/__oc_mods/manifest.json')
+      const r = await fetchJson('http://127.0.0.1:18731/__oc_mods/manifest.json')
       const ids = r.body.mods.map((m) => m.id)
       assert(!ids.includes('should-not-load'), 'Disabled mod is NOT in manifest')
       await fs.unlink(path.join(cwd, 'scripts', '_disabled.js'))
@@ -156,12 +156,12 @@ async function fetchJson(url) {
       const tmpFile = path.join(cwd, 'scripts', '99-hotreload-test.js')
       await fs.writeFile(tmpFile, 'globalThis.OC.register({ id: "hotreload-test", name: "Hot Reload Test", version: "0.1.0", init() { console.log("hot") } })')
       // Force an immediate rescan via the refresh endpoint (avoids racing the 500ms polling tick)
-      await fetch('http://127.0.0.1:8080/__oc_mods/refresh')
-      const r1 = await fetchJson('http://127.0.0.1:8080/__oc_mods/manifest.json')
+      await fetch('http://127.0.0.1:18731/__oc_mods/refresh')
+      const r1 = await fetchJson('http://127.0.0.1:18731/__oc_mods/manifest.json')
       assert(r1.body.mods.some((m) => m.id === 'hotreload-test'), 'New mod appears after add')
       await fs.unlink(tmpFile)
-      await fetch('http://127.0.0.1:8080/__oc_mods/refresh')
-      const r2 = await fetchJson('http://127.0.0.1:8080/__oc_mods/manifest.json')
+      await fetch('http://127.0.0.1:18731/__oc_mods/refresh')
+      const r2 = await fetchJson('http://127.0.0.1:18731/__oc_mods/manifest.json')
       assert(!r2.body.mods.some((m) => m.id === 'hotreload-test'), 'Mod disappears after delete')
     }
 
@@ -186,17 +186,17 @@ async function fetchJson(url) {
     return Buffer.from(JSON.stringify(data))
   },
 }`)
-      await fetch('http://127.0.0.1:8080/__oc_mods/refresh')
-      const manifest = await fetchJson('http://127.0.0.1:8080/__oc_mods/manifest.json')
+      await fetch('http://127.0.0.1:18731/__oc_mods/refresh')
+      const manifest = await fetchJson('http://127.0.0.1:18731/__oc_mods/manifest.json')
       assert(manifest.body.serverMods.some((m) => m.id === 'server-hooks-test'), 'Manifest includes server mod')
       assert(!manifest.body.mods.some((m) => m.id === 'server-hooks-test'), 'Server mod is not injected as client code')
-      const local = await fetchJson('http://127.0.0.1:8080/api/server-local')
+      const local = await fetchJson('http://127.0.0.1:18731/api/server-local')
       assert(local.status === 200 && local.body.local === true, 'onRequest can handle a local endpoint')
-      const modified = await fetchJson('http://127.0.0.1:8080/api/server-mod-test')
+      const modified = await fetchJson('http://127.0.0.1:18731/api/server-mod-test')
       assert(modified.body.upstream === true && modified.body.modified === true, 'onResponse can modify an upstream response')
       await fs.unlink(tmpFile)
-      await fetch('http://127.0.0.1:8080/__oc_mods/refresh')
-      const afterDelete = await fetchJson('http://127.0.0.1:8080/__oc_mods/manifest.json')
+      await fetch('http://127.0.0.1:18731/__oc_mods/refresh')
+      const afterDelete = await fetchJson('http://127.0.0.1:18731/__oc_mods/manifest.json')
       assert(!afterDelete.body.serverMods.some((m) => m.id === 'server-hooks-test'), 'Server mod disappears after delete')
     }
 

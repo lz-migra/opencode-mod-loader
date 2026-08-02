@@ -18,7 +18,7 @@
 //      after the proxy died (or vice versa).
 //
 // Env vars (all optional, read at boot):
-//   OC_LAUNCHER_PORT          Port for the proxy (default 8080).
+//   OC_LAUNCHER_PORT          Port for the proxy (default: config.json proxyPort).
 //                             Forwards to the proxy as OC_PROXY_PORT.
 //   OC_LAUNCHER_UPSTREAM_PORT Port for opencode web (default 4096).
 //                             Forwards to the proxy as OC_TARGET_URL.
@@ -62,6 +62,7 @@ import { spawn } from 'node:child_process'
 import net from 'node:net'
 import { setTimeout as wait } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
+import { loadProjectConfig } from './internal/config.mjs'
 import {
   createCliRenderer,
   BoxRenderable,
@@ -81,12 +82,13 @@ import {
 // `C:\C:\Users\...` and silently fails with `Cannot find module ...`.
 // `fileURLToPath` returns the proper OS-native absolute path.
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
+const PROJECT_CONFIG = loadProjectConfig(__dirname)
 function absPath(p) {
   return fileURLToPath(new URL(p, import.meta.url))
 }
 
 // ─── Configuration ────────────────────────────────────────────────
-const PROXY_PORT        = parseInt(process.env.OC_LAUNCHER_PORT || '8080', 10)
+const PROXY_PORT        = parseInt(process.env.OC_LAUNCHER_PORT || String(PROJECT_CONFIG.proxyPort), 10)
 const UPSTREAM_PORT     = parseInt(process.env.OC_LAUNCHER_UPSTREAM_PORT || '4096', 10)
 const PROXY_HOST        = process.env.OC_LAUNCHER_HOST || '127.0.0.1'
 const OPENCODE_BIN      = process.env.OC_LAUNCHER_OPENCODE_BIN || 'opencode'
