@@ -32,7 +32,7 @@ cd \opencode-mod-loader
 node server.mjs
 
 # 4. Open your browser at
-#    http://localhost:8080
+#    http://localhost:7531
 #    (NOT :4096 — the proxy is the entry point)
 ```
 
@@ -146,11 +146,25 @@ The polling watcher re-scans `scripts/` every 500 ms. When you save a file:
 - Next page load: browser sends `If-None-Match: "<old-hash>"`, proxy says 304
   if content hasn't actually changed, or sends full body with new ETag.
 
+## Configuration
+
+Edit `config.json` to choose the proxy port used by both `node server.mjs` and
+`bun launcher.mjs`:
+
+```json
+{
+  "proxyPort": 7531
+}
+```
+
+`proxyPort` must be an integer from 1 to 65535. `OC_PROXY_PORT` overrides this
+value for the proxy, while `OC_LAUNCHER_PORT` overrides it for the launcher.
+
 ## Environment Variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `OC_PROXY_PORT` | `8080` | Port the proxy listens on |
+| `OC_PROXY_PORT` | `config.json` → `proxyPort` | Port the proxy listens on |
 | `OC_PROXY_HOST` | `0.0.0.0` | Interface to bind (set `127.0.0.1` for local-only access) |
 | `OC_TARGET_URL` | `http://127.0.0.1:4096` | Upstream OpenCode server |
 | `OC_SCRIPTS_DIR` | `./scripts` | Where to look for mods |

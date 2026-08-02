@@ -28,15 +28,17 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { ModLoader } from './internal/loader.mjs'
+import { loadProjectConfig } from './internal/config.mjs'
 import { shouldInject, injectHTML, injectBundle, getStandaloneModBundle } from './internal/injector.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const PROJECT_CONFIG = loadProjectConfig(__dirname)
 
 // ============================================================
 // Configuration
 // ============================================================
 const CONFIG = {
-  LISTEN_PORT: parseInt(process.env.OC_PROXY_PORT || '8080', 10),
+  LISTEN_PORT: parseInt(process.env.OC_PROXY_PORT || String(PROJECT_CONFIG.proxyPort), 10),
   LISTEN_HOST: process.env.OC_PROXY_HOST || '0.0.0.0',
   TARGET_URL: process.env.OC_TARGET_URL || 'http://127.0.0.1:4096',
   SCRIPTS_DIR: process.env.OC_SCRIPTS_DIR || path.join(__dirname, 'scripts'),
